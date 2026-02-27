@@ -3,22 +3,21 @@ from groq import Groq
 import sqlite3
 from datetime import datetime
 
-# --- 1. CONFIGURAÇÃO DE SEGURANÇA ---
-# Aqui o app busca a chave no "cofre" (Secrets) do Streamlit Cloud
+# --- CONFIGURAÇÃO DE SEGURANÇA ---
 try:
     minha_chave = st.secrets["GROQ_API_KEY"]
     client = Groq(api_key=minha_chave)
 except Exception:
-    st.error("Erro: A chave GROQ_API_KEY não foi configurada nos Secrets do Streamlit.")
+    st.error("Erro: Configure a GROQ_API_KEY nos Secrets.")
     st.stop()
 
-# --- 2. FUNÇÕES DO BANCO DE DADOS ---
+# --- BANCO DE DADOS ---
 def iniciar_banco():
     conn = sqlite3.connect('dados_do_ze.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS roteiros 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  data TEXT, produto TEXT, roteiro TEXT)''')
+                  data TEXT, produto TEXT, conteudo TEXT)''')
     conn.commit()
     conn.close()
 
@@ -26,56 +25,48 @@ def salvar_no_banco(produto, texto):
     conn = sqlite3.connect('dados_do_ze.db')
     c = conn.cursor()
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
-    c.execute("INSERT INTO roteiros (data, produto, roteiro) VALUES (?, ?, ?)", 
+    c.execute("INSERT INTO roteiros (data, produto, conteudo) VALUES (?, ?, ?)", 
               (data_hora, produto, texto))
     conn.commit()
     conn.close()
 
-def buscar_historico():
-    conn = sqlite3.connect('dados_do_ze.db')
-    c = conn.cursor()
-    c.execute("SELECT data, produto, roteiro FROM roteiros ORDER BY id DESC")
-    dados = c.fetchall()
-    conn.close()
-    return dados
-
-# --- 3. INTERFACE ---
-st.set_page_config(page_title="Assistente do Zé", layout="wide", page_icon="🤖")
+# --- INTERFACE ---
+st.set_page_config(page_title="Zé: Roteiro + Vídeo", layout="wide", page_icon="🎬")
 iniciar_banco()
 
-st.title("🤖 AI Assistant Manager (O Zé)")
-st.write("App rodando na nuvem - Foco: TikTok Shop")
+st.title("🎬 O Zé: Diretor de Conteúdo")
+st.write("Gere roteiros para venda e prompts para IAs de vídeo (Veo/Luma).")
 
-tab_criar, tab_historico = st.tabs(["🎥 Novo Roteiro", "📂 Histórico"])
+nome_produto = st.text_input("Qual o produto?", placeholder="Ex: Smartwatch à prova d'água")
 
-with tab_criar:
-    nome_produto = st.text_input("Qual o produto vamos vender?", placeholder="Ex: Ring Light Profissional")
-    
-    if st.button("Gerar Roteiro Estilo Zé"):
-        if nome_produto:
-            with st.spinner('O Zé está preparando o roteiro...'):
-                try:
-                    chat = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": "Você é o Zé, criador de conteúdo no Rio de Janeiro. Linguagem natural, carismática e com gírias leves. NUNCA fale preços ou valores. Foque em benefícios e curiosidades."},
-                            {"role": "user", "content": f"Crie um roteiro de vídeo curto para o TikTok Shop sobre: {nome_produto}"}
-                        ],
-                        model="llama-3.3-70b-versatile",
-                    )
-                    texto_final = chat.choices[0].message.content
-                    salvar_no_banco(nome_produto, texto_final)
-                    st.success("Roteiro gerado!")
-                    st.markdown(f"### 📝 Sugestão do Zé:\n\n{texto_final}")
-                except Exception as e:
-                    st.error(f"Erro ao falar com a IA: {e}")
-        else:
-            st.warning("Coloque o nome do produto primeiro!")
-
-with tab_historico:
-    st.subheader("Roteiros que você já criou")
-    dados = buscar_historico()
-    if not dados:
-        st.info("O histórico está vazio por enquanto.")
-    for r in dados:
-        with st.expander(f"📅 {r[0]} | 📦 {r[1]}"):
-            st.write(r[2])
+if st.button("🚀 Gerar Estratégia Completa"):
+    if nome_produto:
+        with st.spinner('O Zé está roteirizando e dirigindo a cena...'):
+            try:
+                chat = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "Você é o Zé. Escreva um roteiro para TikTok Shop (sem preços) e, abaixo dele, escreva '---' e um 'VIDEO PROMPT' em inglês técnico para IA de vídeo 4K cinematográfica."},
+                        {"role": "user", "content": f"Produto: {nome_produto}"}
+                    ],
+                    model="llama-3.3-70b-versatile",
+                )
+                resposta_completa = chat.choices[0].message.content
+                salvar_no_banco(nome_produto, resposta_completa)
+                
+                # Exibição organizada
+                st.success("Tudo pronto! Confira abaixo:")
+                
+                # Divide a resposta para organizar visualmente
+                partes = resposta_completa.split('---')
+                
+                st.subheader("📝 Roteiro Sugerido")
+                st.markdown(partes[0])
+                
+                if len(partes) > 1:
+                    st.subheader("🎥 Prompt para IA de Vídeo (Copie e cole no Veo/Luma)")
+                    st.code(partes[1].strip(), language="text")
+                    
+            except Exception as e:
+                st.error(f"Erro: {e}")
+    else:
+        st.warning("Digite o nome do produto!")
