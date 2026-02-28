@@ -1,96 +1,77 @@
 import streamlit as st
 from groq import Groq
+from huggingface_hub import InferenceClient
 import sqlite3
 from datetime import datetime
 
-# --- CONFIGURAÇÃO DE SEGURANÇA ---
+# --- CONFIGURAÇÕES DE SEGURANÇA ---
 try:
-    minha_chave = st.secrets["GROQ_API_KEY"]
-    client = Groq(api_key=minha_chave)
-except Exception:
-    st.error("Erro: Configure a GROQ_API_KEY nos Secrets.")
+    GROQ_KEY = st.secrets["GROQ_API_KEY"]
+    HF_TOKEN = st.secrets["HF_TOKEN"]
+    
+    client_groq = Groq(api_key=GROQ_KEY)
+    # Cliente para o "motor" de vídeo (Software Livre)
+    client_video = InferenceClient(token=HF_TOKEN)
+except Exception as e:
+    st.error(f"Erro de Configuração: Verifique seus Secrets. {e}")
     st.stop()
 
-# --- BANCO DE DADOS (COM CORREÇÃO DE COLUNA) ---
+# --- BANCO DE DADOS ---
 def iniciar_banco():
     conn = sqlite3.connect('dados_do_ze.db')
     c = conn.cursor()
-    # Cria a tabela se não existir
     c.execute('''CREATE TABLE IF NOT EXISTS roteiros 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  data TEXT, produto TEXT, roteiro TEXT)''')
-    
-    # LINHA MÁGICA: Se a coluna 'conteudo' não existir, nós usamos a 'roteiro'
-    # Para evitar erros, vamos garantir que o código sempre use o nome 'roteiro'
+                  data TEXT, produto TEXT, conteudo TEXT)''')
     conn.commit()
     conn.close()
-
-def salvar_no_banco(produto, texto):
-    conn = sqlite3.connect('dados_do_ze.db')
-    c = conn.cursor()
-    data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
-    c.execute("INSERT INTO roteiros (data, produto, roteiro) VALUES (?, ?, ?)", 
-              (data_hora, produto, texto))
-    conn.commit()
-    conn.close()
-
-def buscar_historico():
-    conn = sqlite3.connect('dados_do_ze.db')
-    c = conn.cursor()
-    try:
-        c.execute("SELECT data, produto, roteiro FROM roteiros ORDER BY id DESC")
-        dados = c.fetchall()
-    except:
-        dados = []
-    conn.close()
-    return dados
 
 # --- INTERFACE ---
-st.set_page_config(page_title="Zé: Roteiro + Vídeo", layout="wide", page_icon="🎬")
+st.set_page_config(page_title="Zé: Plataforma de Vídeo", layout="wide", page_icon="🎬")
 iniciar_banco()
 
-st.title("🎬 O Zé: Diretor de Conteúdo")
-st.write("Gere roteiros para venda e prompts para IAs de vídeo (Veo/Luma).")
+st.title("🎬 O Zé: Sua Plataforma de Vídeo IA")
+st.write("Gere roteiros e tente criar vídeos grátis usando modelos Open Source.")
 
-tab1, tab2 = st.tabs(["🎥 Novo Roteiro", "📂 Histórico"])
+nome_produto = st.text_input("Qual o produto?", placeholder="Ex: Relógio Inteligente")
 
-with tab1:
-    nome_produto = st.text_input("Qual o produto?", placeholder="Ex: Mini Projetor 4K")
-    
-    if st.button("🚀 Gerar Estratégia Completa"):
-        if nome_produto:
-            with st.spinner('O Zé está roteirizando e dirigindo a cena...'):
-                try:
-                    chat = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": "Você é o Zé. Escreva um roteiro para TikTok Shop (sem preços) e, abaixo dele, escreva '---' e um 'VIDEO PROMPT' em inglês técnico para IA de vídeo 4K cinematográfica (estilo Veo/Luma)."},
-                            {"role": "user", "content": f"Produto: {nome_produto}"}
-                        ],
-                        model="llama-3.3-70b-versatile",
-                    )
-                    resposta_completa = chat.choices[0].message.content
-                    salvar_no_banco(nome_produto, resposta_completa)
-                    
-                    st.success("Tudo pronto!")
-                    
-                    # Divide o roteiro do prompt de vídeo
-                    if '---' in resposta_completa:
-                        partes = resposta_completa.split('---')
-                        st.subheader("📝 Roteiro Sugerido")
-                        st.markdown(partes[0])
-                        st.subheader("🎥 Prompt para IA de Vídeo (Copie e cole no Veo/Luma)")
-                        st.code(partes[1].strip(), language="text")
-                    else:
-                        st.markdown(resposta_completa)
-                        
-                except Exception as e:
-                    st.error(f"Erro na IA: {e}")
-        else:
-            st.warning("Digite o nome do produto!")
+if st.button("🚀 Gerar Estratégia e Vídeo"):
+    if nome_produto:
+        with st.spinner('O Zé está trabalhando...'):
+            try:
+                # 1. GERAR TEXTO COM GROQ
+                chat = client_groq.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "Você é o Zé. Escreva um roteiro para TikTok Shop e um PROMPT DE VÍDEO técnico em inglês (cinematographic, 4k, high detail). Separe-os com '---'."},
+                        {"role": "user", "content": f"Produto: {nome_produto}"}
+                    ],
+                    model="llama-3.3-70b-versatile",
+                )
+                res = chat.choices[0].message.content
+                partes = res.split('---')
+                roteiro = partes[0]
+                prompt_video = partes[1].strip() if len(partes) > 1 else "Professional product shot, 4k"
 
-with tab2:
-    st.subheader("Histórico de Criações")
-    historico = buscar_historico()
-    for h in historico:
-        with st.expander(f"{h[0]} - {h[1]}"):
-            st.write(h[2])
+                st.subheader("📝 Roteiro Sugerido")
+                st.markdown(roteiro)
+
+                # 2. TENTAR GERAR VÍDEO COM HUGGING FACE (Mochi-1 ou HunyuanVideo)
+                st.subheader("🎥 Sua Geração de Vídeo (Beta)")
+                with st.spinner('Tentando gerar vídeo no servidor gratuito...'):
+                    try:
+                        # Usando o modelo HunyuanVideo (referência em 2026 para T2V open source)
+                        video_data = client_video.text_to_video(
+                            prompt_video, 
+                            model="tencent/HunyuanVideo" 
+                        )
+                        st.video(video_data)
+                        st.success("Vídeo gerado com sucesso!")
+                    except Exception as ve:
+                        st.warning("O servidor gratuito de vídeo está ocupado ou em fila.")
+                        st.info("Copie o prompt abaixo e use no Kling ou Luma como alternativa:")
+                        st.code(prompt_video, language="text")
+
+            except Exception as e:
+                st.error(f"Erro geral: {e}")
+    else:
+        st.warning("Digite o produto!")
