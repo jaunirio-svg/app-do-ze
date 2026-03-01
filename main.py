@@ -4,39 +4,44 @@ import json
 from groq import Groq
 from huggingface_hub import HfApi
 
-# 1. Configurações de Página
-st.set_page_config(page_title="O Zé - Minerador & Copy", page_icon="🤖", layout="wide")
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="O Zé - Minerador & Copy", layout="wide")
 
-# 2. Inicialização de APIs (Segurança contra tela branca)
-GROQ_KEY = os.environ.get("GROQ_API_KEY")
-HF_TOKEN = os.environ.get("HUGGINGFACE_HUB_TOKEN")
-
-if not GROQ_KEY:
-    st.error("Erro: A variável GROQ_API_KEY não foi encontrada nas configurações.")
+# --- CONEXÃO COM A API (GROQ) ---
+# Usando try/except para evitar que o app quebre se a chave estiver errada
+try:
+    if "GROQ_API_KEY" in os.environ:
+        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    elif "groq_key" in st.secrets:
+        client = Groq(api_key=st.secrets["groq_key"])
+    else:
+        st.error("⚠️ Chave GROQ não encontrada! Configure nas Variáveis de Ambiente.")
+        st.stop()
+except Exception as e:
+    st.error(f"Erro ao conectar com a Groq: {e}")
     st.stop()
 
-client = Groq(api_key=GROQ_KEY)
-
-# 3. Lógica do "Zé" (Copy + Prompts de Elite)
-def engine_do_ze(produto_input):
-    # O Prompt do sistema força o Zé a usar as técnicas de Nano Banana e Veo
+# --- FUNÇÃO MESTRE DO ZÉ ---
+def chamar_o_ze(produto_input):
+    # Prompt que define o comportamento do Zé e injeta os comandos poderosos
     prompt_sistema = (
-        "Você é 'O Zé', o melhor Minerador de produtos e Copywriter do mundo. "
-        "Sua resposta deve ser sempre um objeto JSON puro."
+        "Você é o 'O Zé', assistente de elite para minerar produtos e criar copy. "
+        "Sua resposta deve ser obrigatoriamente um objeto JSON puro, sem explicações fora do JSON."
     )
     
     prompt_usuario = f"""
-    Analise o produto: {produto_input}
-    Crie:
-    1. Uma Copy matadora para anúncios.
-    2. Um prompt de imagem altamente poderoso para o modelo Nano Banana (use termos como: Hasselblad, 8k, Octane Render, Studio Lighting).
-    3. Um prompt de vídeo altamente poderoso para o modelo Veo (use termos como: Orbital shot, 60fps, fluid physics, cinematic).
+    PRODUTO: {produto_input}
     
-    Retorne apenas este formato JSON:
+    TAREFAS:
+    1. Crie uma Copy de vendas persuasiva.
+    2. Crie um PROMPT DE IMAGEM para o Nano Banana: Use termos de fotografia Hasselblad, lens 85mm, 8k, Octane Render, Studio Lighting.
+    3. Crie um PROMPT DE VÍDEO para o Veo: Use orbital tracking shot, cinematic, 60fps, realistic physics.
+
+    RESPONDA NESTE FORMATO JSON:
     {{
-        "copy": "texto aqui",
-        "prompt_imagem": "prompt técnico aqui",
-        "prompt_video": "prompt técnico aqui"
+        "copy": "...",
+        "prompt_imagem": "...",
+        "prompt_video": "..."
     }}
     """
 
@@ -46,46 +51,45 @@ def engine_do_ze(produto_input):
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": prompt_usuario}
             ],
-            model="llama3-70b-8192", # Modelo Groq ultra-rápido
+            model="llama3-70b-8192",
             response_format={"type": "json_object"}
         )
         return json.loads(chat_completion.choices[0].message.content)
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Falha na API: {str(e)}"}
 
-# 4. Interface Streamlit (UI)
-st.title("🤖 O Zé - Minerador & Copywriter")
-st.info("Mineração rápida com Groq e Prompts de Mídia para Nano Banana & Veo")
+# --- INTERFACE DO USUÁRIO ---
+st.title("🤖 O Zé - Minerador & Copywriter v2.1")
+st.markdown("---")
 
-with st.sidebar:
-    st.header("Configurações")
-    if HF_TOKEN:
-        st.success("HuggingFace Conectado!")
-    else:
-        st.warning("HF Token não configurado.")
+# Campo de entrada
+produto_nome = st.text_input("Nome do produto para o Zé minerar:", placeholder="Ex: Smartwatch Ultra...")
 
-produto = st.text_input("Qual produto vamos minerar?", placeholder="Ex: Fone de ouvido por condução óssea")
-
-if st.button("Gerar Estratégia do Zé"):
-    if produto:
-        with st.spinner("O Zé está trabalhando..."):
-            dados = engine_do_ze(produto)
+if st.button("🚀 Gerar com Poder Máximo"):
+    if produto_nome:
+        with st.spinner("O Zé está processando os dados..."):
+            res = chamar_o_ze(produto_nome)
             
-            if "error" in dados:
-                st.error(f"Ocorreu um erro: {dados['error']}")
+            if "error" in res:
+                st.error(res["error"])
             else:
-                col1, col2 = st.columns([1, 1])
+                # Layout em colunas
+                col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.subheader("📝 Copy de Alta Conversão")
-                    st.markdown(f"> {dados['copy']}")
+                    st.success("📝 Copywriter do Zé")
+                    st.write(res["copy"])
                 
                 with col2:
-                    st.subheader("📸 Prompts para Mídia")
-                    st.write("**Imagem (Nano Banana):**")
-                    st.code(dados['prompt_imagem'], language="text")
+                    st.info("🖼️ Criativos de Mídia")
+                    st.markdown("**Prompt p/ Imagem (Nano Banana):**")
+                    st.code(res["prompt_imagem"], language="text")
                     
-                    st.write("**Vídeo (Veo):**")
-                    st.code(dados['prompt_video'], language="text")
+                    st.markdown("**Prompt p/ Vídeo (Veo):**")
+                    st.code(res["prompt_video"], language="text")
     else:
-        st.warning("Digite o nome de um produto para começar.")
+        st.warning("Por favor, informe o produto.")
+
+# --- FOOTER ---
+st.sidebar.markdown("---")
+st.sidebar.write("⚡ Powered by Groq & HuggingFace Hub")
