@@ -1,50 +1,55 @@
 import streamlit as st
 from groq import Groq
 
-st.set_page_config(page_title="O Zé V4", layout="centered")
+st.set_page_config(page_title="O Zé V4 - Estável", layout="centered")
 
-st.title("🤖 O Zé - Minerador")
+st.title("🤖 O Zé - Minerador (Versão HD 2025)")
+st.caption("Ajustado para as novas limitações do TikTok")
 
 # 1. Conexão com a Groq
 try:
-    # Usando a chave dos secrets
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    key = st.secrets["GROQ_API_KEY"].strip()
+    client = Groq(api_key=key)
 except Exception as e:
-    st.error(f"Erro na chave: {e}")
+    st.error("Erro nos Secrets: Chave API não encontrada.")
+    st.stop()
 
-# 2. Entradas
-url = st.text_input("🔗 Link do TikTok:")
-produto = st.text_input("📦 Nome do Produto (Ex: Carregador de Bateria):")
+# 2. Interface de Usuário
+url_bruta = st.text_input("🔗 Cole o link do TikTok:", placeholder="https://www.tiktok.com/...")
+produto = st.text_input("📦 Nome do Produto:", placeholder="Ex: Mini Projetor Portátil")
 
-# 3. Botão de Ação
-if st.button("🚀 GERAR AGORA"):
-    if url and produto:
+# 3. Processamento
+if st.button("🚀 GERAR ESTRATÉGIA", type="primary"):
+    if url_bruta and produto:
         with st.spinner("O Zé está processando..."):
             try:
-                # Mudamos o modelo para o 70b (mais robusto) e limpamos o prompt
-                chat = client.chat.completions.create(
+                # Limpando o link para evitar erro na Groq
+                url_limpa = url_bruta.split('?')[0]
+                
+                # Chamada da IA
+                completion = client.chat.completions.create(
                     messages=[
-                        {
-                            "role": "system", 
-                            "content": "Você é um especialista em marketing de dropshipping."
-                        },
-                        {
-                            "role": "user", 
-                            "content": f"Crie um roteiro de 15 segundos para vender este produto: {produto}. Foque em utilidade."
-                        }
+                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto {produto}. Foque em Reels/TikTok."}
                     ],
-                    model="llama-3.3-70b-versatile", # Trocamos o modelo aqui
+                    model="llama3-8b-8192",
                 )
                 
-                st.success("Gerado com sucesso!")
-                st.markdown(f"### 📝 Roteiro:\n{chat.choices[0].message.content}")
+                st.success("✅ Roteiro Pronto!")
+                st.info(completion.choices[0].message.content)
                 
-                # Link de Download
-                link_dl = f"https://www.tikwm.com/video/media?url={url}"
-                st.link_button("📥 BAIXAR VÍDEO", link_dl)
+                st.divider()
+                st.subheader("📥 Download do Vídeo")
+                st.warning("Nota: Devido às mudanças no TikTok (Maio/2025), o download será na máxima qualidade disponível (1080p Low Bitrate).")
+                
+                # Link de Download Direto
+                link_servidor = f"https://www.tikwm.com/video/media?url={url_limpa}"
+                st.link_button("📥 BAIXAR AGORA (Servidor 1)", link_servidor)
                 
             except Exception as e:
-                # Se der erro de novo, ele vai mostrar o nome do erro aqui
-                st.error(f"Erro na Groq: {e}")
+                st.error(f"Erro ao processar: {e}")
+                st.info("Dica: Tente atualizar a página e colar o link novamente.")
     else:
-        st.warning("⚠️ Preencha o link e o nome do produto!")
+        st.warning("⚠️ Preencha todos os campos!")
+
+st.markdown("---")
+st.caption("Zé António & IA - 2025")
