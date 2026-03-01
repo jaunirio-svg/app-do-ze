@@ -2,56 +2,52 @@ import streamlit as st
 import os
 import json
 from groq import Groq
-from huggingface_hub import HfApi
 
-# 1. Setup inicial sem frescura
-st.set_page_config(page_title="O Zé - Debug Mode", layout="wide")
+# ... (seu código de setup e verificação de chave continua igual)
 
-# 2. Verificação de Chaves (Onde a maioria dos erros acontece)
-groq_key = os.environ.get("GROQ_API_KEY") or st.secrets.get("groq_key")
-
-st.title("🤖 O Zé - Minerador (Modo de Manutenção)")
-
-if not groq_key:
-    st.error("⚠️ Erro: Chave GROQ não configurada. O App não vai funcionar sem ela.")
-else:
-    st.success("✅ Chave Groq detectada. Pronto para testar.")
-
-# 3. Bloco de Função (Preparado para conserto)
 def engine_do_ze(produto):
     if not groq_key:
         return {"error": "Sem API Key"}
         
     client = Groq(api_key=groq_key)
     
-    # Prompt Blindado que o Zé vai usar
-    prompt_sistema = "Você é o 'Zé', responda apenas em JSON."
-    prompt_usuario = f"Crie copy e prompts de imagem/vídeo para: {produto}"
+    # Prompt do Zé atualizado com a inteligência para os novos modelos de mídia
+    prompt_sistema = (
+        "Você é 'O Zé', Minerador e Copywriter de elite. "
+        "Sua missão é criar copy de alta conversão e prompts de mídia blindados. "
+        "Responda EXCLUSIVAMENTE em formato JSON."
+    )
+    
+    prompt_usuario = f"""
+    PRODUTO: {produto}
+    
+    Gere um JSON com:
+    1. 'copy': Texto persuasivo de vendas.
+    2. 'prompt_img': Prompt poderoso para Nano Banana (8k, Hasselblad, Octane Render).
+    3. 'prompt_vid': Prompt dinâmico para Veo (Orbital shot, 60fps, Cinematic).
+    """
 
     try:
-        # Tentativa de chamada
+        # ATUALIZADO: Usando o modelo llama-3.3-70b-versatile (O sucessor do que deu erro)
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user", "content": prompt_usuario}
             ],
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile", 
             response_format={"type": "json_object"}
         )
         return json.loads(chat_completion.choices[0].message.content)
     except Exception as e:
-        return {"error": str(e)}
+        # Se o 3.3 também falhar por cota, tentamos o 3.1-8b como backup automático
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt_usuario}],
+                model="llama-3.1-8b-instant",
+                response_format={"type": "json_object"}
+            )
+            return json.loads(chat_completion.choices[0].message.content)
+        except:
+            return {"error": f"Erro na Groq: {str(e)}"}
 
-# 4. Interface Simples
-produto_input = st.text_input("Produto:")
-
-if st.button("Tentar Gerar"):
-    resultado = engine_do_ze(produto_input)
-    if "error" in resultado:
-        st.warning(f"Erro detectado: {resultado['error']}")
-        st.info("Dica: Verifique se o modelo 'llama3-70b-8192' está disponível ou se a cota da Groq acabou.")
-    else:
-        st.json(resultado)
-
-st.markdown("---")
-st.write("🛠️ *Código salvo. Aguardando próximas instruções para conserto.*")
+# ... (resto da sua interface Streamlit)
