@@ -1,52 +1,60 @@
 import streamlit as st
 from groq import Groq
 
-# Configuração da Página
-st.set_page_config(page_title="O Zé V4.3", layout="centered", page_icon="🤖")
+# 1. Configuração de Página
+st.set_page_config(page_title="O Zé V4.4", layout="centered", page_icon="🎬")
 
-st.title("🤖 O Zé - Minerador (Atualizado 2026)")
-st.markdown("---")
+st.title("🤖 O Zé - Minerador & Roteirista")
+st.info("Atualizado para as novas travas do TikTok (Março/2026)")
 
-# 1. Conexão com a Groq
+# 2. Conexão com a Groq
 try:
     key = st.secrets["GROQ_API_KEY"].strip()
     client = Groq(api_key=key)
 except Exception as e:
-    st.error("Erro nos Secrets: Chave API não configurada.")
+    st.error("Erro nos Secrets: Verifique sua chave GROQ_API_KEY.")
     st.stop()
 
-# 2. Entrada de Dados
-url_tiktok = st.text_input("🔗 Link do TikTok:", placeholder="Cole o link do vídeo aqui...")
-nome_produto = st.text_input("📦 Nome do Produto:", placeholder="Ex: Mini Processador")
+# 3. Interface de Usuário
+url_tiktok = st.text_input("🔗 Cole o link do TikTok aqui:", placeholder="https://vm.tiktok.com/...")
+nome_produto = st.text_input("📦 Qual o nome do produto?", placeholder="Ex: Bicicleta Elétrica")
 
-# 3. Processamento com o Novo Modelo (Llama 3.1 ou 3.3)
-if st.button("🚀 GERAR ESTRATÉGIA", type="primary"):
+# 4. Ação do Zé
+if st.button("🚀 GERAR ESTRATÉGIA AGORA", type="primary"):
     if url_tiktok and nome_produto:
-        with st.spinner("O Zé está consultando o novo modelo da IA..."):
+        # Limpeza básica do link para evitar erros de servidor
+        link_limpo = url_tiktok.split('?')[0]
+        
+        with st.spinner("O Zé está analisando o nicho..."):
             try:
-                # ATUALIZAÇÃO: Usando o modelo sucessor que está ativo em 2026
-                chat = client.chat.completions.create(
+                # MODELO ATUALIZADO 2026: Llama 3.1 8B Instant
+                completion = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "Você é um redator de anúncios de alta conversão para Dropshipping."},
-                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto: {nome_produto}. Foco em benefícios reais."}
+                        {"role": "system", "content": "Você é um especialista em Reels e TikTok Ads."},
+                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto: {nome_produto}. Use uma linguagem que venda muito!"}
                     ],
-                    model="llama-3.1-8b-instant", # Este modelo substituiu o antigo 8b-8192
-                    temperature=0.7
+                    model="llama-3.1-8b-instant",
+                    temperature=0.8,
                 )
                 
-                st.success("✅ Roteiro Atualizado!")
-                st.markdown(f"### 📝 Sugestão de Copy:\n{chat.choices[0].message.content}")
+                # Resultado da IA
+                st.success("✅ Roteiro Gerado!")
+                st.markdown(f"### 📝 Sugestão de Copy:\n{completion.choices[0].message.content}")
                 
                 st.divider()
-                st.subheader("📥 Download do Vídeo")
-                link_servidor = f"https://www.tikwm.com/video/media?url={url_tiktok}"
-                st.link_button("📥 BAIXAR VÍDEO AGORA", link_servidor)
-
+                
+                # Botão de Download com Servidor Alternativo
+                st.subheader("📥 Download do Criativo")
+                st.warning("Se o vídeo não abrir, aguarde 5 segundos e tente novamente (Limitação do TikTok).")
+                
+                # Link do servidor que você estava tentando usar
+                link_servidor = f"https://www.tikwm.com/video/media?url={link_limpo}"
+                st.link_button("📥 BAIXAR VÍDEO (Servidor HD)", link_servidor)
+                
             except Exception as e:
-                # Caso a Groq mude o nome de novo, este erro nos avisará
-                st.error(f"Erro na IA: {e}")
+                st.error(f"Erro técnico: {e}")
     else:
-        st.warning("⚠️ Preencha os campos para continuar.")
+        st.warning("⚠️ O Zé precisa do link e do nome do produto!")
 
 st.markdown("---")
-st.caption("O Zé v4.3 - Modelo Llama 3.1 Instant (Sucessor)")
+st.caption("O Zé v4.4 - Inteligência Artificial aplicada ao Dropshipping")
