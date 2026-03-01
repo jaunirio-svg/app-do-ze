@@ -1,63 +1,69 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Configuração de Página
-st.set_page_config(page_title="O Zé V4.5", layout="centered", page_icon="🎬")
+# Configuração
+st.set_page_config(page_title="O Zé V4.6", layout="centered", page_icon="🚀")
 
-st.title("🤖 O Zé - Minerador Profissional")
+st.title("🤖 O Zé - Minerador & Copywriter")
 st.markdown("---")
 
-# 2. Conexão com a Groq
+# 1. Conexão IA
 try:
     key = st.secrets["GROQ_API_KEY"].strip()
     client = Groq(api_key=key)
-except Exception as e:
-    st.error("Erro nos Secrets: Verifique sua chave API.")
+except:
+    st.error("Erro na chave API nos Secrets.")
     st.stop()
 
-# 3. Interface
-url_tiktok = st.text_input("🔗 Link do TikTok:", placeholder="Cole o link aqui...")
-nome_produto = st.text_input("📦 Nome do Produto:", placeholder="Ex: Mini Projetor")
+# 2. Interface
+url_input = st.text_input("🔗 Link do TikTok:", placeholder="Cole o link aqui...")
+produto_input = st.text_input("📦 Nome do Produto:", placeholder="Ex: Depilador a Laser")
 
-# 4. Ação
-if st.button("🚀 GERAR ESTRATÉGIA E VÍDEO", type="primary"):
-    if url_tiktok and nome_produto:
-        # LIMPEZA DO LINK: Remove rastreadores do TikTok que quebram o download
-        link_limpo = url_tiktok.split('?')[0]
+# 3. Processamento
+if st.button("🚀 GERAR TUDO", type="primary"):
+    if url_input and produto_input:
+        # Limpeza do link (essencial para o download funcionar)
+        link_limpo = url_input.split('?')[0]
         
-        with st.spinner("O Zé está preparando tudo..."):
+        with st.spinner("O Zé está criando sua estratégia..."):
             try:
-                # Gerar Roteiro com modelo atualizado
+                # Gerar Roteiro
                 chat = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "Você é um copywriter de elite para Reels."},
-                        {"role": "user", "content": f"Roteiro de 15s para vender: {nome_produto}."}
+                        {"role": "system", "content": "Você é um especialista em anúncios de dropshipping."},
+                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto: {produto_input}."}
                     ],
                     model="llama-3.1-8b-instant",
                 )
                 
-                # Exibir Roteiro
+                # Exibição
                 st.success("✅ Roteiro Criado!")
                 st.info(chat.choices[0].message.content)
                 
                 st.divider()
+                st.subheader("📥 Download do Vídeo")
                 
-                # ÁREA DE DOWNLOAD
-                st.subheader("📥 Obter Vídeo Sem Marca D'água")
+                # Instrução de como baixar
+                st.write("Escolha uma das opções abaixo para baixar sem marca d'água:")
                 
-                # Criamos um link que leva direto para o processamento do vídeo
-                download_url = f"https://www.tikwm.com/video/media?url={link_limpo}"
+                col1, col2 = st.columns(2)
                 
-                st.write("Clique no botão abaixo. Se o vídeo abrir em outra aba, clique com o **botão direito** e selecione **'Salvar vídeo como...'**.")
+                with col1:
+                    # Opção TikWM (A que você está usando)
+                    url_tikwm = f"https://www.tikwm.com/video/media?url={link_limpo}"
+                    st.link_button("💾 Servidor 1 (TikWM)", url_tikwm)
                 
-                st.link_button("🔥 BAIXAR VÍDEO AGORA", download_url)
-                
-                st.caption("Nota: Se o vídeo não baixar automaticamente, é devido às novas travas de segurança do TikTok de 2025.")
+                with col2:
+                    # Opção Alternativa (Caso a primeira falhe)
+                    url_snaptik = f"https://snaptik.app/abc.php?url={link_limpo}"
+                    st.link_button("💾 Servidor 2 (SnapTik)", url_snaptik)
+
+                st.warning("⚠️ **Como baixar:** Se o vídeo abrir no navegador, clique com o botão direito nele e escolha **'Salvar vídeo como...'**.")
 
             except Exception as e:
                 st.error(f"Erro na IA: {e}")
     else:
-        st.warning("⚠️ Preencha o link e o nome do produto.")
+        st.warning("Preencha o link e o nome do produto!")
 
 st.markdown("---")
-st.caption("Zé António Tech - Versão Estável 2026")
+st.caption("Zé António - Atualizado para as travas do TikTok 2026")
