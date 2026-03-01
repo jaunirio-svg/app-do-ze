@@ -2,59 +2,62 @@ import streamlit as st
 from groq import Groq
 
 # 1. Configuração de Página
-st.set_page_config(page_title="O Zé V4.4", layout="centered", page_icon="🎬")
+st.set_page_config(page_title="O Zé V4.5", layout="centered", page_icon="🎬")
 
-st.title("🤖 O Zé - Minerador & Roteirista")
-st.info("Atualizado para as novas travas do TikTok (Março/2026)")
+st.title("🤖 O Zé - Minerador Profissional")
+st.markdown("---")
 
 # 2. Conexão com a Groq
 try:
     key = st.secrets["GROQ_API_KEY"].strip()
     client = Groq(api_key=key)
 except Exception as e:
-    st.error("Erro nos Secrets: Verifique sua chave GROQ_API_KEY.")
+    st.error("Erro nos Secrets: Verifique sua chave API.")
     st.stop()
 
-# 3. Interface de Usuário
-url_tiktok = st.text_input("🔗 Cole o link do TikTok aqui:", placeholder="https://vm.tiktok.com/...")
-nome_produto = st.text_input("📦 Qual o nome do produto?", placeholder="Ex: Bicicleta Elétrica")
+# 3. Interface
+url_tiktok = st.text_input("🔗 Link do TikTok:", placeholder="Cole o link aqui...")
+nome_produto = st.text_input("📦 Nome do Produto:", placeholder="Ex: Mini Projetor")
 
-# 4. Ação do Zé
-if st.button("🚀 GERAR ESTRATÉGIA AGORA", type="primary"):
+# 4. Ação
+if st.button("🚀 GERAR ESTRATÉGIA E VÍDEO", type="primary"):
     if url_tiktok and nome_produto:
-        # Limpeza básica do link para evitar erros de servidor
+        # LIMPEZA DO LINK: Remove rastreadores do TikTok que quebram o download
         link_limpo = url_tiktok.split('?')[0]
         
-        with st.spinner("O Zé está analisando o nicho..."):
+        with st.spinner("O Zé está preparando tudo..."):
             try:
-                # MODELO ATUALIZADO 2026: Llama 3.1 8B Instant
-                completion = client.chat.completions.create(
+                # Gerar Roteiro com modelo atualizado
+                chat = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "Você é um especialista em Reels e TikTok Ads."},
-                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto: {nome_produto}. Use uma linguagem que venda muito!"}
+                        {"role": "system", "content": "Você é um copywriter de elite para Reels."},
+                        {"role": "user", "content": f"Roteiro de 15s para vender: {nome_produto}."}
                     ],
                     model="llama-3.1-8b-instant",
-                    temperature=0.8,
                 )
                 
-                # Resultado da IA
-                st.success("✅ Roteiro Gerado!")
-                st.markdown(f"### 📝 Sugestão de Copy:\n{completion.choices[0].message.content}")
+                # Exibir Roteiro
+                st.success("✅ Roteiro Criado!")
+                st.info(chat.choices[0].message.content)
                 
                 st.divider()
                 
-                # Botão de Download com Servidor Alternativo
-                st.subheader("📥 Download do Criativo")
-                st.warning("Se o vídeo não abrir, aguarde 5 segundos e tente novamente (Limitação do TikTok).")
+                # ÁREA DE DOWNLOAD
+                st.subheader("📥 Obter Vídeo Sem Marca D'água")
                 
-                # Link do servidor que você estava tentando usar
-                link_servidor = f"https://www.tikwm.com/video/media?url={link_limpo}"
-                st.link_button("📥 BAIXAR VÍDEO (Servidor HD)", link_servidor)
+                # Criamos um link que leva direto para o processamento do vídeo
+                download_url = f"https://www.tikwm.com/video/media?url={link_limpo}"
                 
+                st.write("Clique no botão abaixo. Se o vídeo abrir em outra aba, clique com o **botão direito** e selecione **'Salvar vídeo como...'**.")
+                
+                st.link_button("🔥 BAIXAR VÍDEO AGORA", download_url)
+                
+                st.caption("Nota: Se o vídeo não baixar automaticamente, é devido às novas travas de segurança do TikTok de 2025.")
+
             except Exception as e:
-                st.error(f"Erro técnico: {e}")
+                st.error(f"Erro na IA: {e}")
     else:
-        st.warning("⚠️ O Zé precisa do link e do nome do produto!")
+        st.warning("⚠️ Preencha o link e o nome do produto.")
 
 st.markdown("---")
-st.caption("O Zé v4.4 - Inteligência Artificial aplicada ao Dropshipping")
+st.caption("Zé António Tech - Versão Estável 2026")
