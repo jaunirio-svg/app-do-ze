@@ -1,77 +1,53 @@
 import streamlit as st
+import pandas as pd
 from groq import Groq
-from huggingface_hub import InferenceClient
-import sqlite3
-from datetime import datetime
 
-# --- CONFIGURAÇÕES DE SEGURANÇA ---
-try:
-    GROQ_KEY = st.secrets["GROQ_API_KEY"]
-    HF_TOKEN = st.secrets["HF_TOKEN"]
-    
-    client_groq = Groq(api_key=GROQ_KEY)
-    # Cliente para o "motor" de vídeo (Software Livre)
-    client_video = InferenceClient(token=HF_TOKEN)
-except Exception as e:
-    st.error(f"Erro de Configuração: Verifique seus Secrets. {e}")
-    st.stop()
+# 1. Configuração da API Groq (Puxando dos Secrets do Streamlit)
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- BANCO DE DADOS ---
-def iniciar_banco():
-    conn = sqlite3.connect('dados_do_ze.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS roteiros 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  data TEXT, produto TEXT, conteudo TEXT)''')
-    conn.commit()
-    conn.close()
+# 2. Inicializando o Histórico na Sessão
+if 'historico_vendas' not in st.session_state:
+    st.session_state.historico_vendas = []
 
-# --- INTERFACE ---
-st.set_page_config(page_title="Zé: Plataforma de Vídeo", layout="wide", page_icon="🎬")
-iniciar_banco()
+st.set_page_config(page_title="O Zé v2.0", page_icon="🤖", layout="wide")
 
-st.title("🎬 O Zé: Sua Plataforma de Vídeo IA")
-st.write("Gere roteiros e tente criar vídeos grátis usando modelos Open Source.")
+st.title("🤖 O Zé - Inteligência de Vendas")
+st.caption("Automação de Roteiros, Histórico e Download de Vídeos")
 
-nome_produto = st.text_input("Qual o produto?", placeholder="Ex: Relógio Inteligente")
+# --- ÁREA DE OPERAÇÃO ---
+url_produto = st.text_input("🔗 Cole o link do TikTok aqui:")
 
-if st.button("🚀 Gerar Estratégia e Vídeo"):
-    if nome_produto:
-        with st.spinner('O Zé está trabalhando...'):
-            try:
-                # 1. GERAR TEXTO COM GROQ
-                chat = client_groq.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": "Você é o Zé. Escreva um roteiro para TikTok Shop e um PROMPT DE VÍDEO técnico em inglês (cinematographic, 4k, high detail). Separe-os com '---'."},
-                        {"role": "user", "content": f"Produto: {nome_produto}"}
-                    ],
-                    model="llama-3.3-70b-versatile",
-                )
-                res = chat.choices[0].message.content
-                partes = res.split('---')
-                roteiro = partes[0]
-                prompt_video = partes[1].strip() if len(partes) > 1 else "Professional product shot, 4k"
+if url_produto:
+    with st.spinner("O Zé está processando via Groq..."):
+        # Chamada da Inteligência Groq para criar o roteiro
+        chat = client.chat.completions.create(
+            messages=[{"role": "user", "content": f"Crie um roteiro de 15s, título e hashtags para: {url_produto}"}],
+            model="llama3-8b-8192",
+        )
+        roteiro = chat.choices[0].message.content
+        
+        # Link para Download (Serviço externo de bypass)
+        link_download = f"https://www.tikwm.com/video/media?url={url_produto}"
 
-                st.subheader("📝 Roteiro Sugerido")
-                st.markdown(roteiro)
+        # Adicionando ao Histórico
+        st.session_state.historico_vendas.append({
+            "Data": pd.Timestamp.now().strftime("%H:%M"),
+            "Produto": url_produto[:40] + "...",
+            "Status": "✅ Concluído"
+        })
 
-                # 2. TENTAR GERAR VÍDEO COM HUGGING FACE (Mochi-1 ou HunyuanVideo)
-                st.subheader("🎥 Sua Geração de Vídeo (Beta)")
-                with st.spinner('Tentando gerar vídeo no servidor gratuito...'):
-                    try:
-                        # Usando o modelo HunyuanVideo (referência em 2026 para T2V open source)
-                        video_data = client_video.text_to_video(
-                            prompt_video, 
-                            model="tencent/HunyuanVideo" 
-                        )
-                        st.video(video_data)
-                        st.success("Vídeo gerado com sucesso!")
-                    except Exception as ve:
-                        st.warning("O servidor gratuito de vídeo está ocupado ou em fila.")
-                        st.info("Copie o prompt abaixo e use no Kling ou Luma como alternativa:")
-                        st.code(prompt_video, language="text")
+        # Exibindo os Resultados
+        st.success("Análise Finalizada!")
+        st.subheader("🎙️ Roteiro e Estratégia")
+        st.info(roteiro)
+        
+        st.link_button("📥 BAIXAR VÍDEO (SEM MARCA D'ÁGUA)", link_download)
 
-            except Exception as e:
-                st.error(f"Erro geral: {e}")
-    else:
-        st.warning("Digite o produto!")
+# --- TABELA DE HISTÓRICO ---
+st.divider()
+st.subheader("📜 Histórico de Mineração")
+if st.session_state.historico_vendas:
+    df_hist = pd.DataFrame(st.session_state.historico_vendas)
+    st.table(df_hist)
+else:
+    st.write("Nenhum item minerado nesta sessão.")
