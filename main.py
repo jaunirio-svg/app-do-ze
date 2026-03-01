@@ -2,67 +2,42 @@ import streamlit as st
 import pandas as pd
 from groq import Groq
 
+# Configuração da Página
+st.set_page_config(page_title="O Zé v4.0", layout="wide")
+
+# Título visível para sabermos que o código atualizou
+st.title("🤖 O Zé - Versão 4.0 (Teste de Botão)")
+
 # 1. Conexão com a Groq
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except:
-    st.error("ERRO: Chave GROQ_API_KEY não encontrada nos Secrets!")
+except Exception as e:
+    st.error(f"Erro na Chave API: {e}")
 
-# 2. Inicialização do Histórico
-if 'historico' not in st.session_state:
-    st.session_state.historico = []
+# 2. Campos de Entrada
+url = st.text_input("🔗 Link do TikTok:")
+produto = st.text_input("📦 Nome do Produto (Ex: Carregador de Bateria):")
 
-st.set_page_config(page_title="O Zé v4.0", layout="wide", page_icon="🤖")
-
-st.title("🤖 O Zé - Mineração de Elite")
-st.markdown("---")
-
-# --- ENTRADA DE DADOS ---
-st.subheader("🚀 Nova Mineração")
-url = st.text_input("🔗 1. Cole o link do TikTok aqui:")
-produto_nome = st.text_input("📦 2. O que é este produto? (Ex: Carregador de Bateria, Drone, Liquidificador)")
-
-# O BOTÃO QUE FALTAVA
-botao_gerar = st.button("🔥 GERAR ROTEIRO E DOWNLOAD")
-
-if botao_gerar:
-    if url and produto_nome:
-        with st.spinner(f"O Zé está analisando o {produto_nome}..."):
+# 3. O BOTÃO (Gatilho)
+if st.button("🚀 CLIQUE AQUI PARA GERAR"):
+    if url and produto:
+        with st.spinner("O Zé está processando..."):
             try:
-                # Prompt que impede alucinações
-                prompt_final = f"""
-                PRODUTO: {produto_nome}
-                LINK: {url}
-                TAREFA: Escreva um roteiro de 15 segundos para Reels/TikTok.
-                ESTILO: Venda direta, focado na UTILIDADE e na solução do problema.
-                IMPORTANTE: Se for ferramenta, fale de utilidade. NÃO fale de corrida ou luxo.
-                """
-                
-                completion = client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt_final}],
+                # Chamada da IA
+                chat = client.chat.completions.create(
+                    messages=[{"role": "user", "content": f"Crie um roteiro de 15s para o produto: {produto}. Use o link como referência: {url}. Foque na utilidade!"}],
                     model="llama3-8b-8192",
                 )
                 
-                roteiro = completion.choices[0].message.content
-                download_link = f"https://www.tikwm.com/video/media?url={url}"
-
-                # Atualiza Histórico
-                st.session_state.historico.insert(0, {"Produto": produto_nome, "Hora": pd.Timestamp.now().strftime("%H:%M")})
-
-                # MOSTRAR RESULTADOS
-                st.success("Análise Concluída com Sucesso!")
-                st.subheader(f"🎙️ Roteiro Sugerido:")
-                st.info(roteiro)
+                roteiro = chat.choices[0].message.content
+                st.success("Gerado com sucesso!")
+                st.markdown(f"### Roteiro:\n{roteiro}")
                 
-                st.link_button("📥 BAIXAR VÍDEO AGORA", download_link)
-
+                # Botão de Download
+                link_dl = f"https://www.tikwm.com/video/media?url={url}"
+                st.link_button("📥 BAIXAR VÍDEO", link_dl)
+                
             except Exception as e:
-                st.error(f"Erro na Groq: {e}")
+                st.error(f"Erro ao processar: {e}")
     else:
-        st.warning("⚠️ O Zé precisa que você preencha o LINK e o NOME DO PRODUTO!")
-
-# --- HISTÓRICO ---
-st.markdown("---")
-if st.session_state.historico:
-    st.subheader("📜 Itens Minerados Hoje")
-    st.table(pd.DataFrame(st.session_state.historico))
+        st.warning("Preencha o link e o nome do produto!")
