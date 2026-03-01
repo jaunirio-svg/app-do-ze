@@ -1,69 +1,44 @@
-import streamlit as st
-from groq import Groq
+import os
+# Supondo que você use a lib oficial: pip install groq
+from groq import Groq 
 
-# Configuração
-st.set_page_config(page_title="O Zé V4.6", layout="centered", page_icon="🚀")
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-st.title("🤖 O Zé - Minerador & Copywriter")
-st.markdown("---")
+class ZeEngine:
+    def __init__(self):
+        self.modelo = "llama3-70b-8192" # Modelo potente da Groq
 
-# 1. Conexão IA
-try:
-    key = st.secrets["GROQ_API_KEY"].strip()
-    client = Groq(api_key=key)
-except:
-    st.error("Erro na chave API nos Secrets.")
-    st.stop()
+    def minerar_e_criar(self, produto):
+        # 1. Lógica de Copy e Mineração (Sua função anterior otimizada)
+        prompt_sistema = (
+            "Você é 'O Zé', especialista em Mineração e Copywriting. "
+            "Sua tarefa é criar uma copy de alta conversão e, ao mesmo tempo, "
+            "gerar prompts altamente poderosos para imagem (Nano Banana) e vídeo (Veo)."
+        )
 
-# 2. Interface
-url_input = st.text_input("🔗 Link do TikTok:", placeholder="Cole o link aqui...")
-produto_input = st.text_input("📦 Nome do Produto:", placeholder="Ex: Depilador a Laser")
-
-# 3. Processamento
-if st.button("🚀 GERAR TUDO", type="primary"):
-    if url_input and produto_input:
-        # Limpeza do link (essencial para o download funcionar)
-        link_limpo = url_input.split('?')[0]
+        prompt_usuario = f"""
+        Produto: {produto}
         
-        with st.spinner("O Zé está criando sua estratégia..."):
-            try:
-                # Gerar Roteiro
-                chat = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": "Você é um especialista em anúncios de dropshipping."},
-                        {"role": "user", "content": f"Crie um roteiro de 15s para o produto: {produto_input}."}
-                    ],
-                    model="llama-3.1-8b-instant",
-                )
-                
-                # Exibição
-                st.success("✅ Roteiro Criado!")
-                st.info(chat.choices[0].message.content)
-                
-                st.divider()
-                st.subheader("📥 Download do Vídeo")
-                
-                # Instrução de como baixar
-                st.write("Escolha uma das opções abaixo para baixar sem marca d'água:")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    # Opção TikWM (A que você está usando)
-                    url_tikwm = f"https://www.tikwm.com/video/media?url={link_limpo}"
-                    st.link_button("💾 Servidor 1 (TikWM)", url_tikwm)
-                
-                with col2:
-                    # Opção Alternativa (Caso a primeira falhe)
-                    url_snaptik = f"https://snaptik.app/abc.php?url={link_limpo}"
-                    st.link_button("💾 Servidor 2 (SnapTik)", url_snaptik)
+        Tarefas:
+        1. Crie uma Copy de vendas (Direct Response).
+        2. Crie um PROMPT DE IMAGEM BLINDADO: Use termos de fotografia Hasselblad, 8k, Octane Render.
+        3. Crie um PROMPT DE VÍDEO PODEROSO: Use termos como 60fps, orbital move, cinematic.
+        
+        Responda em JSON para facilitar o uso no App.
+        """
 
-                st.warning("⚠️ **Como baixar:** Se o vídeo abrir no navegador, clique com o botão direito nele e escolha **'Salvar vídeo como...'**.")
+        # Chamada ultra-rápida da Groq
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            model=self.modelo,
+            response_format={"type": "json_object"} # Força o retorno organizado
+        )
+        
+        return chat_completion.choices[0].message.content
 
-            except Exception as e:
-                st.error(f"Erro na IA: {e}")
-    else:
-        st.warning("Preencha o link e o nome do produto!")
-
-st.markdown("---")
-st.caption("Zé António - Atualizado para as travas do TikTok 2026")
+# --- Exemplo de como os prompts saem do Groq "blindados" ---
+# Imagem: "{produto}, realistic studio photo, 85mm, f/1.8, cinematic lighting, high detail"
+# Vídeo: "{produto}, product reveal, camera tracking, slow motion 120fps, 4k"
