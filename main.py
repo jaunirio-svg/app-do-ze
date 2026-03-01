@@ -4,48 +4,32 @@ import json
 from groq import Groq
 from huggingface_hub import HfApi
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="O Zé - Minerador & Copy", layout="wide")
+# 1. Setup inicial sem frescura
+st.set_page_config(page_title="O Zé - Debug Mode", layout="wide")
 
-# --- CONEXÃO COM A API (GROQ) ---
-# Usando try/except para evitar que o app quebre se a chave estiver errada
-try:
-    if "GROQ_API_KEY" in os.environ:
-        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-    elif "groq_key" in st.secrets:
-        client = Groq(api_key=st.secrets["groq_key"])
-    else:
-        st.error("⚠️ Chave GROQ não encontrada! Configure nas Variáveis de Ambiente.")
-        st.stop()
-except Exception as e:
-    st.error(f"Erro ao conectar com a Groq: {e}")
-    st.stop()
+# 2. Verificação de Chaves (Onde a maioria dos erros acontece)
+groq_key = os.environ.get("GROQ_API_KEY") or st.secrets.get("groq_key")
 
-# --- FUNÇÃO MESTRE DO ZÉ ---
-def chamar_o_ze(produto_input):
-    # Prompt que define o comportamento do Zé e injeta os comandos poderosos
-    prompt_sistema = (
-        "Você é o 'O Zé', assistente de elite para minerar produtos e criar copy. "
-        "Sua resposta deve ser obrigatoriamente um objeto JSON puro, sem explicações fora do JSON."
-    )
+st.title("🤖 O Zé - Minerador (Modo de Manutenção)")
+
+if not groq_key:
+    st.error("⚠️ Erro: Chave GROQ não configurada. O App não vai funcionar sem ela.")
+else:
+    st.success("✅ Chave Groq detectada. Pronto para testar.")
+
+# 3. Bloco de Função (Preparado para conserto)
+def engine_do_ze(produto):
+    if not groq_key:
+        return {"error": "Sem API Key"}
+        
+    client = Groq(api_key=groq_key)
     
-    prompt_usuario = f"""
-    PRODUTO: {produto_input}
-    
-    TAREFAS:
-    1. Crie uma Copy de vendas persuasiva.
-    2. Crie um PROMPT DE IMAGEM para o Nano Banana: Use termos de fotografia Hasselblad, lens 85mm, 8k, Octane Render, Studio Lighting.
-    3. Crie um PROMPT DE VÍDEO para o Veo: Use orbital tracking shot, cinematic, 60fps, realistic physics.
-
-    RESPONDA NESTE FORMATO JSON:
-    {{
-        "copy": "...",
-        "prompt_imagem": "...",
-        "prompt_video": "..."
-    }}
-    """
+    # Prompt Blindado que o Zé vai usar
+    prompt_sistema = "Você é o 'Zé', responda apenas em JSON."
+    prompt_usuario = f"Crie copy e prompts de imagem/vídeo para: {produto}"
 
     try:
+        # Tentativa de chamada
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": prompt_sistema},
@@ -56,40 +40,18 @@ def chamar_o_ze(produto_input):
         )
         return json.loads(chat_completion.choices[0].message.content)
     except Exception as e:
-        return {"error": f"Falha na API: {str(e)}"}
+        return {"error": str(e)}
 
-# --- INTERFACE DO USUÁRIO ---
-st.title("🤖 O Zé - Minerador & Copywriter v2.1")
-st.markdown("---")
+# 4. Interface Simples
+produto_input = st.text_input("Produto:")
 
-# Campo de entrada
-produto_nome = st.text_input("Nome do produto para o Zé minerar:", placeholder="Ex: Smartwatch Ultra...")
-
-if st.button("🚀 Gerar com Poder Máximo"):
-    if produto_nome:
-        with st.spinner("O Zé está processando os dados..."):
-            res = chamar_o_ze(produto_nome)
-            
-            if "error" in res:
-                st.error(res["error"])
-            else:
-                # Layout em colunas
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.success("📝 Copywriter do Zé")
-                    st.write(res["copy"])
-                
-                with col2:
-                    st.info("🖼️ Criativos de Mídia")
-                    st.markdown("**Prompt p/ Imagem (Nano Banana):**")
-                    st.code(res["prompt_imagem"], language="text")
-                    
-                    st.markdown("**Prompt p/ Vídeo (Veo):**")
-                    st.code(res["prompt_video"], language="text")
+if st.button("Tentar Gerar"):
+    resultado = engine_do_ze(produto_input)
+    if "error" in resultado:
+        st.warning(f"Erro detectado: {resultado['error']}")
+        st.info("Dica: Verifique se o modelo 'llama3-70b-8192' está disponível ou se a cota da Groq acabou.")
     else:
-        st.warning("Por favor, informe o produto.")
+        st.json(resultado)
 
-# --- FOOTER ---
-st.sidebar.markdown("---")
-st.sidebar.write("⚡ Powered by Groq & HuggingFace Hub")
+st.markdown("---")
+st.write("🛠️ *Código salvo. Aguardando próximas instruções para conserto.*")
