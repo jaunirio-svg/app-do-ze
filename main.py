@@ -1,54 +1,59 @@
 import streamlit as st
+import pandas as pd
 from groq import Groq
 
-# Configuração da Página
-st.set_page_config(page_title="O Zé - Minerador", layout="centered")
+# 1. Configuração da Página
+st.set_page_config(page_title="O Zé - Minerador V4", layout="centered", page_icon="🚀")
 
 st.title("🤖 O Zé - Minerador de Produtos")
-st.write("Versão 4.0 - Focada em Dropshipping")
+st.markdown("---")
 
-# 1. Conexão com a Groq
+# 2. Conexão com a Groq (IA)
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    st.sidebar.success("✅ Conectado à IA")
+    st.sidebar.success("✅ IA Conectada")
 except Exception as e:
-    st.sidebar.error(f"❌ Erro de conexão: {e}")
+    st.sidebar.error(f"❌ Erro de Chave API: {e}")
 
-# 2. Entradas do Usuário
-url = st.text_input("🔗 1. Cole o link do TikTok:")
-nome_produto = st.text_input("📦 2. Nome do Produto (Ex: Carregador de Bateria):")
+# 3. Campos de Entrada
+st.subheader("📦 Nova Mineração")
+url_input = st.text_input("🔗 1. Cole o link do TikTok:")
+produto_input = st.text_input("🏷️ 2. O que é este produto? (Ex: Carregador de Bateria)")
 
-# 3. O BOTÃO (Gatilho)
-if st.button("🚀 GERAR ROTEIRO E DOWNLOAD", type="primary"):
-    if url and nome_produto:
-        with st.spinner(f"O Zé está analisando o {nome_produto}..."):
+# 4. O GATILHO (O Botão de Ação)
+if st.button("🚀 GERAR ESTRATÉGIA E DOWNLOAD", type="primary"):
+    if url_input and produto_input:
+        with st.spinner(f"O Zé está analisando o {produto_input}..."):
             try:
-                # Prompt blindado contra erros
-                prompt = f"""
-                Analise o produto: {nome_produto}.
-                Crie um roteiro de 15 segundos para venda (Dropshipping).
-                Foque na UTILIDADE e no PROBLEMA que o {nome_produto} resolve.
-                NÃO fale de carros de luxo ou corridas. 
-                Use o link apenas como referência: {url}
+                # Prompt para evitar que a IA invente carros
+                prompt_ze = f"""
+                PRODUTO: {produto_input}
+                CONTEXTO: Dropshipping / Venda Direta
+                TAREFA: Crie um roteiro de 15 segundos focado na utilidade.
+                REGRAS: 
+                1. Não fale de carros esportivos se o produto for uma ferramenta.
+                2. Foque no problema que o {produto_input} resolve.
+                3. Termine com uma chamada para ação (CTA).
                 """
                 
-                chat = client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
+                chat_completion = client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt_ze}],
                     model="llama3-8b-8192",
                 )
                 
-                # Resultados
-                st.subheader("📝 Roteiro Sugerido:")
-                st.info(chat.choices[0].message.content)
+                # Exibição dos Resultados
+                st.success("Análise Concluída!")
+                st.subheader("🎙️ Sugestão de Roteiro:")
+                st.info(chat_completion.choices[0].message.content)
                 
-                # Link de Download
-                link_download = f"https://www.tikwm.com/video/media?url={url}"
-                st.link_button("📥 BAIXAR VÍDEO AGORA", link_download)
-                
-            except Exception as e:
-                st.error(f"Ocorreu um erro: {e}")
-    else:
-        st.warning("⚠️ Você precisa preencher o link e o nome do produto!")
+                # Link de Download (TikWM)
+                download_final = f"https://www.tikwm.com/video/media?url={url_input}"
+                st.link_button("📥 BAIXAR VÍDEO AGORA (SEM LOGO)", download_final)
 
-st.divider()
-st.caption("Dica: Se o site não atualizar, faça o 'Reboot' no painel do Streamlit.")
+            except Exception as e:
+                st.error(f"Erro ao processar com a IA: {e}")
+    else:
+        st.warning("⚠️ O Zé precisa que você preencha o link E o nome do produto.")
+
+st.markdown("---")
+st.caption("Dica: Se as mudanças não aparecerem, faça o 'Reboot' no painel do Streamlit.")
