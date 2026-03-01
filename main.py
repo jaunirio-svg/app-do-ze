@@ -2,63 +2,90 @@ import streamlit as st
 import os
 import json
 from groq import Groq
+from huggingface_hub import HfApi
 
-# 1. Configuração Inicial e Segurança
-st.set_page_config(page_title="O Zé - Minerador & Copywriter", layout="wide")
+# 1. Configurações de Página
+st.set_page_config(page_title="O Zé - Minerador & Copy", page_icon="🤖", layout="wide")
 
-# Inicializa o cliente Groq (Certifique-se de ter a Key nas Secrets ou Env)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+# 2. Inicialização de APIs (Segurança contra tela branca)
+GROQ_KEY = os.environ.get("GROQ_API_KEY")
+HF_TOKEN = os.environ.get("HUGGINGFACE_HUB_TOKEN")
 
-# 2. A "Mente" do Zé - Lógica de Prompts Blindados
-def processar_ze(produto_nome):
-    prompt_mestre = f"""
-    Aja como O Zé, Minerador e Copywriter. 
-    Produto: {produto_nome}
+if not GROQ_KEY:
+    st.error("Erro: A variável GROQ_API_KEY não foi encontrada nas configurações.")
+    st.stop()
+
+client = Groq(api_key=GROQ_KEY)
+
+# 3. Lógica do "Zé" (Copy + Prompts de Elite)
+def engine_do_ze(produto_input):
+    # O Prompt do sistema força o Zé a usar as técnicas de Nano Banana e Veo
+    prompt_sistema = (
+        "Você é 'O Zé', o melhor Minerador de produtos e Copywriter do mundo. "
+        "Sua resposta deve ser sempre um objeto JSON puro."
+    )
     
-    Retorne EXATAMENTE um JSON com:
-    1. "copy": Uma copy de alta conversão.
-    2. "prompt_img": Um prompt altamente poderoso (estilo Nano Banana) com lentes 85mm, 8k, Hasselblad, iluminação de estúdio.
-    3. "prompt_vid": Um prompt de vídeo (estilo Veo) com movimento orbital, 60fps, cinematic e slow motion.
+    prompt_usuario = f"""
+    Analise o produto: {produto_input}
+    Crie:
+    1. Uma Copy matadora para anúncios.
+    2. Um prompt de imagem altamente poderoso para o modelo Nano Banana (use termos como: Hasselblad, 8k, Octane Render, Studio Lighting).
+    3. Um prompt de vídeo altamente poderoso para o modelo Veo (use termos como: Orbital shot, 60fps, fluid physics, cinematic).
     
-    Responda APENAS o JSON, sem texto antes ou depois.
+    Retorne apenas este formato JSON:
+    {{
+        "copy": "texto aqui",
+        "prompt_imagem": "prompt técnico aqui",
+        "prompt_video": "prompt técnico aqui"
+    }}
     """
-    
+
     try:
-        completion = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[{"role": "user", "content": prompt_mestre}],
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": prompt_usuario}
+            ],
+            model="llama3-70b-8192", # Modelo Groq ultra-rápido
             response_format={"type": "json_object"}
         )
-        return json.loads(completion.choices[0].message.content)
+        return json.loads(chat_completion.choices[0].message.content)
     except Exception as e:
-        return {"error": f"Erro na Groq: {str(e)}"}
+        return {"error": str(e)}
 
-# 3. Interface do App (Evita a Tela Branca)
-st.title("🤖 O Zé - Minerador & Copywriter v2.0")
-st.markdown("---")
+# 4. Interface Streamlit (UI)
+st.title("🤖 O Zé - Minerador & Copywriter")
+st.info("Mineração rápida com Groq e Prompts de Mídia para Nano Banana & Veo")
 
-produto = st.text_input("Qual produto o Zé deve minerar hoje?", placeholder="Ex: Smartwatch à prova d'água")
+with st.sidebar:
+    st.header("Configurações")
+    if HF_TOKEN:
+        st.success("HuggingFace Conectado!")
+    else:
+        st.warning("HF Token não configurado.")
 
-if st.button("🚀 Gerar Estratégia Completa"):
+produto = st.text_input("Qual produto vamos minerar?", placeholder="Ex: Fone de ouvido por condução óssea")
+
+if st.button("Gerar Estratégia do Zé"):
     if produto:
-        with st.spinner("O Zé está minerando e criando os prompts..."):
-            resultado = processar_ze(produto)
+        with st.spinner("O Zé está trabalhando..."):
+            dados = engine_do_ze(produto)
             
-            if "error" in resultado:
-                st.error(resultado["error"])
+            if "error" in dados:
+                st.error(f"Ocorreu um erro: {dados['error']}")
             else:
-                col1, col2 = st.columns(2)
+                col1, col2 = st.columns([1, 1])
                 
                 with col1:
-                    st.subheader("📝 Copy de Vendas")
-                    st.write(resultado["copy"])
+                    st.subheader("📝 Copy de Alta Conversão")
+                    st.markdown(f"> {dados['copy']}")
                 
                 with col2:
-                    st.subheader("🖼️ Prompts de Mídia (Poderosos)")
-                    st.info("**Prompt de Imagem (Nano Banana):**")
-                    st.code(resultado["prompt_img"])
+                    st.subheader("📸 Prompts para Mídia")
+                    st.write("**Imagem (Nano Banana):**")
+                    st.code(dados['prompt_imagem'], language="text")
                     
-                    st.info("**Prompt de Vídeo (Veo):**")
-                    st.code(resultado["prompt_vid"])
+                    st.write("**Vídeo (Veo):**")
+                    st.code(dados['prompt_video'], language="text")
     else:
-        st.warning("Por favor, digite o nome de um produto!")
+        st.warning("Digite o nome de um produto para começar.")
