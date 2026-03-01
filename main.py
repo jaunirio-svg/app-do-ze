@@ -1,42 +1,19 @@
-import streamlit as st
-import pandas as pd
-from groq import Groq
-
-# 1. Configuração da API Groq com tratamento de erro
-try:
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except:
-    st.error("🔑 Erro: Chave da Groq não encontrada nos Secrets!")
-
-if 'historico_vendas' not in st.session_state:
-    st.session_state.historico_vendas = []
-
-st.set_page_config(page_title="O Zé v2.0", page_icon="🤖", layout="wide")
-st.title("🤖 O Zé - Inteligência de Vendas")
-
-url_produto = st.text_input("🔗 Cole o link do TikTok aqui:")
-
-if url_produto:
-    with st.spinner("O Zé está processando..."):
-        try:
-            # Trocando para o modelo mais estável da Groq (Llama-3.3-70b-versatile)
-            chat = client.chat.completions.create(
-                messages=[{"role": "user", "content": f"Crie um roteiro de 15s e hashtags para: {url_produto}"}],
-                model="llama-3.3-70b-versatile", 
-            )
-            roteiro = chat.choices[0].message.content
-            
-            link_download = f"https://www.tikwm.com/video/media?url={url_produto}"
-            st.session_state.historico_vendas.append({"Data": pd.Timestamp.now().strftime("%H:%M"), "Produto": url_produto[:30], "Status": "✅ OK"})
-
-            st.success("Análise Finalizada!")
-            st.info(roteiro)
-            st.link_button("📥 BAIXAR VÍDEO (SEM MARCA D'ÁGUA)", link_download)
-            
-        except Exception as e:
-            st.error(f"❌ O Zé teve um problema com a Groq. Verifique sua chave API ou o limite de uso. Erro: {e}")
-
-# Histórico
-st.divider()
-if st.session_state.historico_vendas:
-    st.table(pd.DataFrame(st.session_state.historico_vendas))
+# PROMPT DE ELITE PARA DROPSHIPPING (NICHO TÉCNICO/UTILITÁRIO)
+        prompt_especifico = f"""
+        PRODUTO: {url_produto}
+        CONTEXTO: Você é o Zé, minerador de produtos vencedores.
+        
+        INSTRUÇÕES:
+        1. Se o produto for AUTOMOTIVO, identifique se é ACESSÓRIO ou FERRAMENTA (Ex: Carregador/Reparador de Bateria).
+        2. FOCO NO PROBLEMA: Bateria descarregada, frio, carro que não liga.
+        3. FOCO NA SOLUÇÃO: Função 'Pulse Repair', carrega bateria de carro e moto, automático e seguro.
+        4. ROTEIRO (15s): 
+           - GANCHO: "Sua bateria arriou? Não chama o guincho ainda!"
+           - BENEFÍCIO: "Esse carregador inteligente recupera baterias de 12V e 24V com um clique."
+           - CTA: "Link na bio/carrinho pra não ficar na mão!"
+        """
+        
+        chat = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt_especifico}],
+            model="llama-3.3-70b-versatile", 
+        )
