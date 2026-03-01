@@ -1,32 +1,50 @@
 import streamlit as st
 from groq import Groq
 
-st.set_page_config(page_title="O Zé V4")
+st.set_page_config(page_title="O Zé V4", layout="centered")
 
-# Teste Visual Simples
-st.title("🤖 O Zé - Teste de Vida")
-st.write("Se você está lendo isso, o código atualizou!")
+st.title("🤖 O Zé - Minerador")
 
-# 1. Tentar ler a chave
+# 1. Conexão com a Groq
 try:
+    # Usando a chave dos secrets
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    st.success("API Conectada!")
 except Exception as e:
-    st.error(f"Erro nos Secrets: {e}")
+    st.error(f"Erro na chave: {e}")
 
 # 2. Entradas
-url = st.text_input("Link do TikTok:")
-produto = st.text_input("Nome do Produto:")
+url = st.text_input("🔗 Link do TikTok:")
+produto = st.text_input("📦 Nome do Produto (Ex: Carregador de Bateria):")
 
-# 3. Botão
-if st.button("GERAR AGORA"):
+# 3. Botão de Ação
+if st.button("🚀 GERAR AGORA"):
     if url and produto:
-        st.write(f"Buscando informações para: {produto}")
-        # Chamada simples para testar
-        chat = client.chat.completions.create(
-            messages=[{"role": "user", "content": f"Roteiro curto para {produto}"}],
-            model="llama3-8b-8192",
-        )
-        st.info(chat.choices[0].message.content)
+        with st.spinner("O Zé está processando..."):
+            try:
+                # Mudamos o modelo para o 70b (mais robusto) e limpamos o prompt
+                chat = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "Você é um especialista em marketing de dropshipping."
+                        },
+                        {
+                            "role": "user", 
+                            "content": f"Crie um roteiro de 15 segundos para vender este produto: {produto}. Foque em utilidade."
+                        }
+                    ],
+                    model="llama-3.3-70b-versatile", # Trocamos o modelo aqui
+                )
+                
+                st.success("Gerado com sucesso!")
+                st.markdown(f"### 📝 Roteiro:\n{chat.choices[0].message.content}")
+                
+                # Link de Download
+                link_dl = f"https://www.tikwm.com/video/media?url={url}"
+                st.link_button("📥 BAIXAR VÍDEO", link_dl)
+                
+            except Exception as e:
+                # Se der erro de novo, ele vai mostrar o nome do erro aqui
+                st.error(f"Erro na Groq: {e}")
     else:
-        st.warning("Preencha os campos!")
+        st.warning("⚠️ Preencha o link e o nome do produto!")
